@@ -1,11 +1,11 @@
 import Joi from '@hapi/joi';
 import { DynamicModule, Inject, Module, Optional } from '@nestjs/common';
 import { join } from 'path';
-import { ConfigType } from '../../lib';
-import { ConfigModule } from '../../lib/config.module';
-import { ConfigService } from '../../lib/config.service';
-import databaseConfig from './database.config';
-import nestedDatabaseConfig from './nested-database.config';
+import { ConfigType } from '../../../lib';
+import { ConfigModule } from '../../../lib/config.module';
+import { ConfigService } from '../../../lib/config.service';
+import databaseConfig from '../database.config';
+import nestedDatabaseConfig from '../nested-database.config';
 
 @Module({})
 export class AppModule {
@@ -16,48 +16,28 @@ export class AppModule {
     private readonly dbConfig: ConfigType<typeof databaseConfig>,
   ) {}
 
-  static withCache(): DynamicModule {
+  static default(): DynamicModule {
     return {
       module: AppModule,
       imports: [
         ConfigModule.forRoot({
-          cache: true,
-          envFilePath: join(__dirname, '.env'),
-          load: [databaseConfig],
+          type: 'json',
+          filePath: join(__dirname, 'config.json'),
         }),
       ],
     };
   }
 
-  static withEnvVars(): DynamicModule {
+  static withMultipleFiles(): DynamicModule {
     return {
       module: AppModule,
       imports: [
         ConfigModule.forRoot({
-          envFilePath: join(__dirname, '.env'),
-        }),
-      ],
-    };
-  }
-
-  static withExpandedEnvVars(): DynamicModule {
-    return {
-      module: AppModule,
-      imports: [
-        ConfigModule.forRoot({
-          envFilePath: join(__dirname, '.env.expanded'),
-          expandVariables: true,
-        }),
-      ],
-    };
-  }
-
-  static withMultipleEnvFiles(): DynamicModule {
-    return {
-      module: AppModule,
-      imports: [
-        ConfigModule.forRoot({
-          envFilePath: [join(__dirname, '.env.local'), join(__dirname, '.env')],
+          type: 'json',
+          filePath: [
+            join(__dirname, 'config.local.json'),
+            join(__dirname, 'config.json'),
+          ],
         }),
       ],
     };
@@ -68,6 +48,7 @@ export class AppModule {
       module: AppModule,
       imports: [
         ConfigModule.forRoot({
+          type: 'json',
           load: [databaseConfig],
         }),
       ],
@@ -79,25 +60,23 @@ export class AppModule {
       module: AppModule,
       imports: [
         ConfigModule.forRoot({
+          type: 'json',
           load: [nestedDatabaseConfig],
         }),
       ],
     };
   }
 
-  static withSchemaValidation(
-    envFilePath?: string,
-    ignoreEnvFile?: boolean,
-  ): DynamicModule {
+  static withSchemaValidation(filePath?: string): DynamicModule {
     return {
       module: AppModule,
       imports: [
         ConfigModule.forRoot({
-          envFilePath,
-          ignoreEnvFile,
+          type: 'json',
+          filePath,
           validationSchema: Joi.object({
-            PORT: Joi.number().required(),
-            DATABASE_NAME: Joi.string().required(),
+            port: Joi.number().required(),
+            database_name: Joi.string().required(),
           }),
         }),
       ],
@@ -106,15 +85,14 @@ export class AppModule {
 
   static withValidateFunction(
     validate: (config: Record<string, any>) => Record<string, any>,
-    envFilePath?: string,
-    ignoreEnvFile?: boolean,
+    filePath?: string,
   ): DynamicModule {
     return {
       module: AppModule,
       imports: [
         ConfigModule.forRoot({
-          envFilePath,
-          ignoreEnvFile,
+          type: 'json',
+          filePath,
           validate,
         }),
       ],
@@ -125,14 +103,17 @@ export class AppModule {
     return {
       module: AppModule,
       imports: [
-        ConfigModule.forRoot(),
+        ConfigModule.forRoot({ type: 'json' }),
         ConfigModule.forFeature(databaseConfig),
       ],
     };
   }
 
-  getEnvVariables() {
-    return process.env;
+  getTimeout() {
+    return this.configService.get('timeout');
+  }
+  getPort() {
+    return this.configService.get('port');
   }
 
   getDatabaseHost() {

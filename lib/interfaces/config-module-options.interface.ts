@@ -1,38 +1,11 @@
 import { ConfigFactory } from './config-factory.interface';
 
-export interface ConfigModuleOptions {
-  /**
-   * If "true", values from the process.env object will be cached in the memory.
-   * This improves the overall application performance.
-   * See: https://github.com/nodejs/node/issues/3104
-   */
-  cache?: boolean;
-
+interface ConfigModuleBaseOptions {
   /**
    * If "true", registers `ConfigModule` as a global module.
    * See: https://docs.nestjs.com/modules#global-modules
    */
   isGlobal?: boolean;
-
-  /**
-   * If "true", environment files (`.env`) will be ignored.
-   */
-  ignoreEnvFile?: boolean;
-
-  /**
-   * If "true", predefined environment variables will not be validated.
-   */
-  ignoreEnvVars?: boolean;
-
-  /**
-   * Path to the environment file(s) to be loaded.
-   */
-  envFilePath?: string | string[];
-
-  /**
-   * Environment file encoding.
-   */
-  encoding?: string;
 
   /**
    * Custom function to validate environment variables. It takes an object containing environment
@@ -59,6 +32,36 @@ export interface ConfigModuleOptions {
    * See: https://docs.nestjs.com/techniques/configuration
    */
   load?: Array<ConfigFactory>;
+}
+
+export interface ConfigModuleEnvOptions {
+  type: 'env';
+  /**
+   * If "true", values from the process.env object will be cached in the memory.
+   * This improves the overall application performance.
+   * See: https://github.com/nodejs/node/issues/3104
+   */
+  cache?: boolean;
+
+  /**
+   * If "true", environment files (`.env`) will be ignored.
+   */
+  ignoreEnvFile?: boolean;
+
+  /**
+   * If "true", predefined environment variables will not be validated.
+   */
+  ignoreEnvVars?: boolean;
+
+  /**
+   * Path to the environment file(s) to be loaded.
+   */
+  filePath?: string | string[];
+
+  /**
+   * Environment file encoding.
+   */
+  encoding?: string;
 
   /**
    * A boolean value indicating the use of expanded variables.
@@ -67,3 +70,28 @@ export interface ConfigModuleOptions {
    */
   expandVariables?: boolean;
 }
+
+export interface ConfigModuleJsonOptions {
+  type: 'json';
+  /**
+   * Path to the json file(s) to be loaded.
+   */
+  filePath?: string | string[];
+
+  /**
+   * Environment file encoding.
+   */
+  encoding?: string;
+}
+
+export interface ConfigModuleCustomLoaderOptions {
+  type: 'custom';
+  configLoader: () => Promise<Record<string, any>>;
+}
+
+export type ConfigModuleOptions = ConfigModuleBaseOptions &
+  (
+    | ConfigModuleEnvOptions
+    | ConfigModuleJsonOptions
+    | ConfigModuleCustomLoaderOptions
+  );

@@ -1,6 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { AppModule } from '../src/app.module';
+import { AppModule } from '../../src/custom/app.module';
 
 describe('Files', () => {
   let app: INestApplication;
@@ -17,6 +17,8 @@ describe('Files', () => {
   it(`should return loaded configuration`, () => {
     const host = app.get(AppModule).getDatabaseHost();
     expect(host).toEqual('host');
+    const timeout = app.get(AppModule).getTimeout();
+    expect(timeout).toEqual(5000);
   });
 
   it(`should return loaded configuration (injected through constructor)`, () => {

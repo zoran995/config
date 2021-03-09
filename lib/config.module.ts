@@ -1,22 +1,19 @@
 import { DynamicModule, Module } from '@nestjs/common';
 import { FactoryProvider } from '@nestjs/common/interfaces';
-import * as dotenv from 'dotenv';
-import dotenvExpand from 'dotenv-expand';
-import * as fs from 'fs';
-import { resolve } from 'path';
 import { isObject } from 'util';
 import { ConfigHostModule } from './config-host.module';
 import {
   CONFIGURATION_LOADER,
   CONFIGURATION_SERVICE_TOKEN,
   CONFIGURATION_TOKEN,
+  VALIDATED_CONFIGURATION_KEY,
   VALIDATED_ENV_LOADER,
-  VALIDATED_ENV_PROPNAME,
 } from './config.constants';
 import { ConfigService } from './config.service';
 import { ConfigFactory, ConfigModuleOptions } from './interfaces';
 import { ConfigFactoryKeyHost } from './utils';
 import { createConfigProvider } from './utils/create-config-factory.util';
+import { loadEnvFile, loadJsonFile } from './utils/file-loaders.util';
 import { getRegistrationToken } from './utils/get-registration-token.util';
 import { mergeConfigObject } from './utils/merge-configs.util';
 
@@ -36,36 +33,7 @@ export class ConfigModule {
    * Also, registers custom configurations globally.
    * @param options
    */
-  static forRoot(options: ConfigModuleOptions = {}): DynamicModule {
-    let validatedEnvConfig: Record<string, any> | undefined = undefined;
-    let config = options.ignoreEnvFile ? {} : this.loadEnvFile(options);
-
-    if (!options.ignoreEnvVars) {
-      config = {
-        ...config,
-        ...process.env,
-      };
-    }
-    if (options.validate) {
-      const validatedConfig = options.validate(config);
-      validatedEnvConfig = validatedConfig;
-      this.assignVariablesToProcess(validatedConfig);
-    } else if (options.validationSchema) {
-      const validationOptions = this.getSchemaValidationOptions(options);
-      const {
-        error,
-        value: validatedConfig,
-      } = options.validationSchema.validate(config, validationOptions);
-
-      if (error) {
-        throw new Error(`Config validation error: ${error.message}`);
-      }
-      validatedEnvConfig = validatedConfig;
-      this.assignVariablesToProcess(validatedConfig);
-    } else {
-      this.assignVariablesToProcess(config);
-    }
-
+  static forRoot(options: ConfigModuleOptions): DynamicModule {
     const isConfigToLoad = options.load && options.load.length;
     const providers = (options.load || [])
       .map(factory =>
@@ -77,7 +45,7 @@ export class ConfigModule {
     const configServiceProvider = {
       provide: ConfigService,
       useFactory: (configService: ConfigService) => {
-        if (options.cache) {
+        if (options.type === 'env' && options.cache) {
           configService.isCacheEnabled = true;
         }
         return configService;
@@ -86,16 +54,19 @@ export class ConfigModule {
     };
     providers.push(configServiceProvider);
 
-    if (validatedEnvConfig) {
-      const validatedEnvConfigLoader = {
-        provide: VALIDATED_ENV_LOADER,
-        useFactory: (host: Record<string, any>) => {
-          host[VALIDATED_ENV_PROPNAME] = validatedEnvConfig;
-        },
-        inject: [CONFIGURATION_TOKEN],
-      };
-      providers.push(validatedEnvConfigLoader);
-    }
+    const validatedConfigLoader = {
+      provide: VALIDATED_ENV_LOADER,
+      useFactory: async (host: Record<string, any>) => {
+        const config = await this.loadFile(options);
+        const validatedConfig: Record<string, any> = this.validateConfig(
+          config,
+          options,
+        );
+        host[VALIDATED_CONFIGURATION_KEY] = validatedConfig;
+      },
+      inject: [CONFIGURATION_TOKEN],
+    };
+    providers.push(validatedConfigLoader);
 
     return {
       module: ConfigModule,
@@ -155,26 +126,58 @@ export class ConfigModule {
     };
   }
 
-  private static loadEnvFile(
+  private static validateConfig(
+    config: Record<string, any>,
     options: ConfigModuleOptions,
-  ): Record<string, any> {
-    const envFilePaths = Array.isArray(options.envFilePath)
-      ? options.envFilePath
-      : [options.envFilePath || resolve(process.cwd(), '.env')];
-
-    let config: ReturnType<typeof dotenv.parse> = {};
-    for (const envFilePath of envFilePaths) {
-      if (fs.existsSync(envFilePath)) {
-        config = Object.assign(
-          dotenv.parse(fs.readFileSync(envFilePath)),
-          config,
-        );
-        if (options.expandVariables) {
-          config = dotenvExpand({ parsed: config }).parsed || config;
-        }
+  ) {
+    if (options.validate) {
+      const validatedConfig = options.validate(config);
+      if (options.type === 'env') {
+        this.assignVariablesToProcess(validatedConfig);
+      }
+      return validatedConfig;
+    } else if (options.validationSchema) {
+      const validationOptions = this.getSchemaValidationOptions(options);
+      const {
+        error,
+        value: validatedConfig,
+      } = options.validationSchema.validate(config, validationOptions);
+      if (error) {
+        throw new Error(`Config validation error: ${error.message}`);
+      }
+      if (options.type === 'env') {
+        this.assignVariablesToProcess(validatedConfig);
+      }
+      return validatedConfig;
+    } else {
+      if (options.type === 'env') {
+        this.assignVariablesToProcess(config);
+        return {};
+      } else {
+        return config;
       }
     }
-    return config;
+  }
+
+  private static async loadFile(
+    options: ConfigModuleOptions,
+  ): Promise<Record<string, any>> {
+    if (options.type === 'env') {
+      let config = await loadEnvFile(options);
+      if (!options.ignoreEnvVars) {
+        config = {
+          ...config,
+          ...process.env,
+        };
+      }
+      return config;
+    } else if (options.type === 'json') {
+      return await loadJsonFile(options);
+    } else if (options.type === 'custom') {
+      return await options.configLoader();
+    } else {
+      throw new Error(`Incorrect configuration type: ${(<any>options).type}`);
+    }
   }
 
   private static assignVariablesToProcess(config: Record<string, any>) {

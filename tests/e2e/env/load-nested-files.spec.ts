@@ -1,22 +1,22 @@
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { AppModule } from '../src/app.module';
+import { AppModule } from '../../src/env/app.module';
 
-describe('Environment variables', () => {
+describe('Nested Files', () => {
   let app: INestApplication;
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
-      imports: [AppModule.withEnvVars()],
+      imports: [AppModule.withNestedLoadedConfigurations()],
     }).compile();
 
     app = module.createNestApplication();
     await app.init();
   });
 
-  it(`should return loaded env variables`, () => {
-    const envVars = app.get(AppModule).getEnvVariables();
-    expect(envVars.PORT).toEqual('4000');
+  it(`should return nested loaded configuration`, () => {
+    const host = app.get(AppModule).getNestedDatabaseHost();
+    expect(host).toEqual('host');
   });
 
   afterEach(async () => {

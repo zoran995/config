@@ -1,7 +1,8 @@
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { ConfigService } from '../../lib';
-import { AppModule } from '../src/app.module';
+import get from 'lodash.get';
+import { ConfigService } from '../../../lib';
+import { AppModule } from '../../src/env/app.module';
 
 describe('Cache', () => {
   let app: INestApplication;
@@ -27,6 +28,7 @@ describe('Cache', () => {
 
     it(`should return new vars`, () => {
       process.env['NAME'] = 'CHANGED';
+      const processValue = get(process.env, 'NAME');
       const configService = app.get(ConfigService);
       expect(configService.get('NAME')).toEqual('CHANGED');
     });

@@ -2,10 +2,9 @@ import { Inject, Injectable, Optional } from '@nestjs/common';
 import get from 'lodash.get';
 import has from 'lodash.has';
 import set from 'lodash.set';
-import { isUndefined } from 'util';
 import {
   CONFIGURATION_TOKEN,
-  VALIDATED_ENV_PROPNAME,
+  VALIDATED_CONFIGURATION_KEY,
 } from './config.constants';
 import { NoInferType } from './types';
 
@@ -52,18 +51,18 @@ export class ConfigService<K = Record<string, any>> {
    * @param defaultValue
    */
   get<T = any>(propertyPath: keyof K, defaultValue?: T): T | undefined {
-    const validatedEnvValue = this.getFromValidatedEnv(propertyPath);
-    if (!isUndefined(validatedEnvValue)) {
-      return validatedEnvValue;
+    const validatedConfigValue = this.getFromValidatedConfig(propertyPath);
+    if (validatedConfigValue !== undefined) {
+      return validatedConfigValue;
     }
 
     const processEnvValue = this.getFromProcessEnv(propertyPath, defaultValue);
-    if (!isUndefined(processEnvValue)) {
+    if (processEnvValue !== undefined) {
       return processEnvValue;
     }
 
     const internalValue = this.getFromInternalConfig(propertyPath);
-    if (!isUndefined(internalValue)) {
+    if (internalValue !== undefined) {
       return internalValue;
     }
 
@@ -75,17 +74,19 @@ export class ConfigService<K = Record<string, any>> {
     defaultValue?: T,
   ): T | undefined {
     const cachedValue = get(this.cache, propertyPath);
-    return isUndefined(cachedValue)
+    return cachedValue === undefined
       ? defaultValue
       : ((cachedValue as unknown) as T);
   }
 
-  private getFromValidatedEnv<T = any>(propertyPath: keyof K): T | undefined {
-    const validatedEnvValue = get(
-      this.internalConfig[VALIDATED_ENV_PROPNAME],
+  private getFromValidatedConfig<T = any>(
+    propertyPath: keyof K,
+  ): T | undefined {
+    const validatedConfigValue = get(
+      this.internalConfig[VALIDATED_CONFIGURATION_KEY],
       propertyPath,
     );
-    return (validatedEnvValue as unknown) as T;
+    return (validatedConfigValue as unknown) as T;
   }
 
   private getFromProcessEnv<T = any>(
@@ -97,8 +98,9 @@ export class ConfigService<K = Record<string, any>> {
       has(this.cache as Record<any, any>, propertyPath)
     ) {
       const cachedValue = this.getFromCache(propertyPath, defaultValue);
-      return !isUndefined(cachedValue) ? cachedValue : defaultValue;
+      return cachedValue !== undefined ? cachedValue : defaultValue;
     }
+
     const processValue = get(process.env, propertyPath);
     this.setInCacheIfDefined(propertyPath, processValue);
 

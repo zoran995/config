@@ -1,13 +1,13 @@
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { AppModule } from '../src/app.module';
+import { AppModule } from '../../src/env/app.module';
 
 describe('Environment variables', () => {
   let app: INestApplication;
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
-      imports: [AppModule.withExpandedEnvVars()],
+      imports: [AppModule.withEnvVars()],
     }).compile();
 
     app = module.createNestApplication();
@@ -16,7 +16,7 @@ describe('Environment variables', () => {
 
   it(`should return loaded env variables`, () => {
     const envVars = app.get(AppModule).getEnvVariables();
-    expect(envVars.EMAIL).toEqual('support@myapp.test');
+    expect(envVars.PORT).toEqual('4000');
   });
 
   afterEach(async () => {
