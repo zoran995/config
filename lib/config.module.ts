@@ -33,7 +33,9 @@ export class ConfigModule {
    * Also, registers custom configurations globally.
    * @param options
    */
-  static forRoot(options: ConfigModuleOptions): DynamicModule {
+  static forRoot(
+    options: ConfigModuleOptions = { type: 'env' },
+  ): DynamicModule {
     const isConfigToLoad = options.load && options.load.length;
     const providers = (options.load || [])
       .map(factory =>
