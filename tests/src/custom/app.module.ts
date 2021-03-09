@@ -1,7 +1,4 @@
-import Joi from '@hapi/joi';
 import { DynamicModule, Inject, Module, Optional } from '@nestjs/common';
-import { join } from 'path';
-import { async } from 'rxjs';
 import { ConfigType } from '../../../lib';
 import { ConfigModule } from '../../../lib/config.module';
 import { ConfigService } from '../../../lib/config.service';
