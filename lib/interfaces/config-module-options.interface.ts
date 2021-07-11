@@ -61,7 +61,7 @@ export interface ConfigModuleEnvOptions {
   /**
    * Environment file encoding.
    */
-  encoding?: string;
+  encoding?: BufferEncoding;
 
   /**
    * A boolean value indicating the use of expanded variables.
@@ -81,7 +81,7 @@ export interface ConfigModuleJsonOptions {
   /**
    * Environment file encoding.
    */
-  encoding?: string;
+  encoding?: BufferEncoding;
 }
 
 export interface ConfigModuleCustomLoaderOptions {
